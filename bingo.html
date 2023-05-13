@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ビンゴゲーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .number {
+      width: 80px;
+      height: 80px;
+      line-height: 80px;
+      margin: 5px;
+      background-color: #fff;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .called-number {
+      background-color: #ffbf00;
+    }
+  </style>
+</head>
+<body>
+  <h1>ビンゴゲーム</h1>
+
+  <div class="container" id="numbers-container">
+    <!-- ここに数字が表示されます -->
+  </div>
+
+  <button onclick="drawNumber()">数字を引く</button>
+
+  <script>
+    var numbers = []; // 1から75までの数字を格納する配列
+    var calledNumbers = []; // 引かれた数字の履歴
+
+    // 初期設定
+    for (var i = 1; i <= 75; i++) {
+      numbers.push(i);
+    }
+
+    // 数字を引く関数
+    function drawNumber() {
+      if (numbers.length === 0) {
+        alert("すべての数字が引かれました！");
+        return;
+      }
+
+      var randomIndex = Math.floor(Math.random() * numbers.length);
+      var number = numbers.splice(randomIndex, 1)[0];
+      calledNumbers.push(number);
+
+      displayNumbers();
+    }
+
+    // 数字を表示する関数
+    function displayNumbers() {
+      var container = document.getElementById("numbers-container");
+      container.innerHTML = "";
+
+      for (var i = 1; i <= 75; i++) {
+        var numberDiv = document.createElement("div");
+        numberDiv.textContent = i;
+
+        if (calledNumbers.includes(i)) {
+          numberDiv.classList.add("number", "called-number");
+        } else {
+          numberDiv.classList.add("number");
+        }
+
+        container.appendChild(numberDiv);
+      }
+    }
+
+    // 初回表示
+    displayNumbers();
+  </script>
+</body>
+</html>
