@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <title>日本語クイズ</title>
+</head>
+<body>
+  <nav class="navbar navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand btn btn-primary" href="../index.html">
+        さいしょのページにもどる
+      </a>
+    </div>
+  </nav>
+  <h1>日本語クイズ</h1>
+  <div id="question"></div>
+  <div id="choices"></div>
+  <div id="feedback"></div>
+  <button id="nextButton" style="display: none;">次の問題</button>
+
+  <script>
+    var sentences = [
+      { sentence: "私は__本を読みます。", answer: "その" },
+      { sentence: "彼は__大学に通っています。", answer: "その" },
+      { sentence: "私は__友達と映画に行きます。", answer: "彼と" }
+      // 他の問題を追加する場合は、この配列にオブジェクトを追加してください
+    ];
+
+    var currentQuestion = 0;
+    var correctAnswers = 0;
+
+    function generateQuestion() {
+      var questionDiv = document.getElementById("question");
+      var choicesDiv = document.getElementById("choices");
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      questionDiv.innerHTML = sentences[currentQuestion].sentence;
+      choicesDiv.innerHTML = "";
+
+      var choices = shuffleArray([
+        sentences[currentQuestion].answer,
+        getRandomAnswer(),
+        getRandomAnswer(),
+        getRandomAnswer()
+      ]);
+
+      for (var i = 0; i < choices.length; i++) {
+        var button = document.createElement("button");
+        button.innerHTML = choices[i];
+        button.addEventListener("click", handleAnswer);
+        choicesDiv.appendChild(button);
+      }
+
+      feedbackDiv.innerHTML = "";
+      nextButton.style.display = "none";
+    }
+
+    function handleAnswer(event) {
+      var selectedAnswer = event.target.innerHTML;
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      if (selectedAnswer === sentences[currentQuestion].answer) {
+        feedbackDiv.innerHTML = '<img src="correct.png" alt="正解" />';
+        correctAnswers++;
+        nextButton.style.display = "block";
+      } else {
+        feedbackDiv.innerHTML = '<img src="incorrect.png" alt="不正解" />';
+      }
+    }
+
+    function shuffleArray(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+      return array;
+    }
+
+    function getRandomAnswer() {
+      var randomIndex = Math.floor(Math.random() * sentences.length);
+      return sentences[randomIndex].answer;
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+
+      if (currentQuestion < sentences.length) {
+        generateQuestion();
+      } else {
+        showFinalScore();
+      }
+    }
+
+    function showFinalScore() {
+      var questionDiv = document.getElementById("question");
+      var choicesDiv = document.getElementById("choices");
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      questionDiv.innerHTML = "クイズ終了！正解数:" + correctAnswers + "/" + sentences.length;
+      choicesDiv.innerHTML = "";
+      feedbackDiv.innerHTML = "";
+      nextButton.style.display = "none";
+    }
+
+    generateQuestion();
+    document.getElementById("nextButton").addEventListener("click", nextQuestion);
+  </script>
+</body>
+</html>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #f2f2f2;
+}
+
+h1 {
+  color: #333;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+#question {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+#choices {
+  margin-bottom: 20px;
+}
+
+#choices button {
+  display: block;
+  width: 200px;
+  height: 40px;
+  margin: 10px auto;
+  font-size: 16px;
+  background-color: #fff;
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+#choices button:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+#feedback img {
+  display: block;
+  margin: 20px auto;
+  width: 100px;
+  height: 100px;
+}
+
+#nextButton {
+  display: none;
+  width: 150px;
+  height: 40px;
+  margin: 20px auto;
+  font-size: 16px;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+#nextButton:hover {
+  background-color: #fff;
+  color: #333;
+}
+
+
+</style>

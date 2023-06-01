@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>子供向けゲームアプリ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+  <title>べんきょうアプリ</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -30,7 +32,6 @@
 
     .game img {
       width: 150px;
-      height: 150px;
       margin-bottom: 10px;
     }
 
@@ -42,35 +43,75 @@
     .game p {
       color: #666;
     }
+
+    .game a {
+      text-decoration: none;
+    }
+    .white-back{
+      background: white;
+      padding: 10px;
+      margin-bottom: 30px;
+    }
   </style>
 </head>
 <body>
   <h1>子供向けゲームアプリ</h1>
+  <div class="container white-back">
+    <h2>さんすう</h2>
 
-  <div class="game">
-    <a href="game1.html">
-      <img src="game1-thumbnail.jpg" alt="ゲーム1">
-      <h2>ゲーム1</h2>
-      <p>ゲーム1の説明文がここに入ります。</p>
-    </a>
+    <div class="game">
+      <a href="math/math1.html">
+        <img src="game1-thumbnail.jpg" alt="ゲーム1">
+        <h2>たしざん1</h2>
+        <p>かんたんな「たしざん」をするよ</p>
+      </a>
+    </div>
+
+    <div class="game">
+      <a href="math/math2.html">
+        <img src="game1-thumbnail.jpg" alt="ゲーム1">
+        <h2>たしざん2</h2>
+        <p>すこしむずかしい「たしざん」をするよ</p>
+      </a>
+    </div>
   </div>
 
-  <div class="game">
-    <a href="game2.html">
-      <img src="game2-thumbnail.jpg" alt="ゲーム2">
-      <h2>ゲーム2</h2>
-      <p>ゲーム2の説明文がここに入ります。</p>
-    </a>
+  <div class="container white-back">
+    <h2>こくご</h2>
+
+    <p>じゅんびちゅうだよ</p>
+
   </div>
 
-  <div class="game">
-    <a href="game3.html">
-      <img src="game3-thumbnail.jpg" alt="ゲーム3">
-      <h2>ゲーム3</h2>
-      <p>ゲーム3の説明文がここに入ります。</p>
-    </a>
+  <div class="container white-back">
+    <h2>りか</h2>
+
+    <div class="game">
+      <a href="science/atom.html">
+        <img src="img/atom.png" alt="ゲーム1">
+        <h2>げんそクイズ!</h2>
+        <p>げんそきごうをみて<br />げんそのなまえをこたえてね</p>
+      </a>
+    </div>
   </div>
 
+  <div class="container white-back">
+    <h2>がいこくご</h2>
+    <p>じゅんびちゅうだよ</p>
+  </div>
+
+
+  <div class="container white-back">
+    <h2>そのほか</h2>
+
+    <div class="game">
+      <a href="other/bingo.html">
+        <img src="img/atom.png" alt="ゲーム1">
+        <h2>ビンゴ</h2>
+        <p>ビンゴゲームができるよ</p>
+      </a>
+    </div>
+  </div>
   <!-- 追加のゲームリンクをここに追加 -->
 
 </body>

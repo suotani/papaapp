@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <title>単語クイズ</title>
+</head>
+<body>
+  <nav class="navbar navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand btn btn-primary" href="../index.html">
+        さいしょのページにもどる
+      </a>
+    </div>
+  </nav>
+  <h1>単語クイズ</h1>
+  <div id="question"></div>
+  <div id="choices"></div>
+  <div id="feedback"></div>
+  <button id="nextButton" style="display: none;">次の問題</button>
+
+  <script>
+    var words = [
+      { word: "cat", translation: "ねこ" },
+      { word: "dog", translation: "いぬ" },
+      { word: "bird", translation: "とり" }
+      // 他の単語を追加する場合は、この配列にオブジェクトを追加してください
+    ];
+
+    var currentQuestion = 0;
+    var correctAnswers = 0;
+
+    function playAudio() {
+      var utterance = new SpeechSynthesisUtterance(words[currentQuestion].word);
+      utterance.lang = 'en-US';
+      speechSynthesis.speak(utterance);
+    }
+
+    function generateQuestion() {
+      var questionDiv = document.getElementById("question");
+      var choicesDiv = document.getElementById("choices");
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      questionDiv.innerHTML = "次の単語を聞いて、正しい日本語の読み方を選んでください。";
+      choicesDiv.innerHTML = "";
+
+      playAudio();
+
+      var choices = shuffleArray([
+        words[currentQuestion].translation,
+        getRandomTranslation(),
+        getRandomTranslation(),
+        getRandomTranslation()
+      ]);
+
+      for (var i = 0; i < choices.length; i++) {
+        var button = document.createElement("button");
+        button.innerHTML = choices[i];
+        button.addEventListener("click", handleAnswer);
+        choicesDiv.appendChild(button);
+      }
+
+      feedbackDiv.innerHTML = "";
+      nextButton.style.display = "none";
+    }
+
+    function handleAnswer(event) {
+      var selectedAnswer = event.target.innerHTML;
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      if (selectedAnswer === words[currentQuestion].translation) {
+        feedbackDiv.innerHTML = '<img src="correct.png" alt="正解" />';
+        correctAnswers++;
+      } else {
+        feedbackDiv.innerHTML = '<img src="incorrect.png" alt="不正解" />';
+      }
+
+      nextButton.style.display = "block";
+    }
+
+    function shuffleArray(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+      return array;
+    }
+
+    function getRandomTranslation() {
+      var randomIndex = Math.floor(Math.random() * words.length);
+      return words[randomIndex].translation;
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+
+      if (currentQuestion < words.length) {
+        generateQuestion();
+      } else {
+        showFinalScore();
+      }
+    }
+
+    function showFinalScore() {
+      var questionDiv = document.getElementById("question");
+      var choicesDiv = document.getElementById("choices");
+      var feedbackDiv = document.getElementById("feedback");
+      var nextButton = document.getElementById("nextButton");
+
+      questionDiv.innerHTML = "クイズ終了！正解数: " + correctAnswers + "/" + words.length;
+      choicesDiv.innerHTML = "";
+      feedbackDiv.innerHTML = "";
+      nextButton.style.display = "none";
+    }
+
+    generateQuestion();
+    document.getElementById("nextButton").addEventListener("click", nextQuestion);
+  </script>
+</body>
+
+</html>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    #question, #choices, #feedback {
+      margin: 20px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #choices button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #f2f2f2;
+      color: #333;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #choices button:hover {
+      background-color: #e2e2e2;
+    }
+
+    #feedback img {
+      display: block;
+      margin: 0 auto;
+      margin-top: 20px;
+      max-width: 100px;
+    }
+
+    #nextButton {
+      display: block;
+      width: 200px;
+      margin: 0 auto;
+      margin-top: 20px;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #333;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #nextButton:hover {
+      background-color: #555;
+    }
+  </style>
+
+
+<!--https://ondoku3.com/ja/post/ondoku-faq/ 候補-->

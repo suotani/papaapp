@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <title>元素記号クイズ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+  <nav class="navbar navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand btn btn-primary" href="../index.html">
+        さいしょのページにもどる
+      </a>
+    </div>
+  </nav>
+  <h1>元素記号(げんそきごう)クイズ</h1>
+  <p>この記号(きごう)の元素(げんそ)は何かな？</p>
+  <div class="card">
+    <h2 id="question"></h2>
+    <p id="result"></p>
+    <button onclick="checkAnswer()" id="answer">こたえ</button>
+    <button onclick="generateQuestion()" id="next">つぎへ</button>
+  </div>
+    
+  <script>
+    // 元素のデータ（記号と名前）を配列で保存
+    var elements = [
+      { symbol: "H", name: "すいそ" },
+      { symbol: "He", name: "へりうむ" },
+      { symbol: "Li", name: "りちうむ" },
+      { symbol: "Be", name: "べりりうむ" },
+      { symbol: "B", name: "ほうそ" },
+      { symbol: "C", name: "たんそ" },
+      { symbol: "N", name: "ちっそ" },
+      { symbol: "O", name: "さんそ" },
+      { symbol: "F", name: "ふっそ" },
+      { symbol: "Ne", name: "ねおん" },
+      { symbol: "Na", name: "なとりうむ" },
+      { symbol: "Mg", name: "まぐねしうむ" },
+      { symbol: "Al", name: "あるみにうむ" },
+      { symbol: "Si", name: "けいそ" },
+      { symbol: "P", name: "りんそ" },
+      { symbol: "S", name: "いおう" },
+      { symbol: "Cl", name: "くろうりん" },
+      { symbol: "Ar", name: "あごん" },
+      { symbol: "K", name: "かりうむ" },
+      { symbol: "Ca", name: "かるしうむ" },
+    ]
+
+    var mode = 'answer';
+    var currentQuestionIndex;
+    
+    function checkAnswer() {
+      document.getElementById("result").textContent = elements[currentQuestionIndex].name;
+      document.getElementById("answer").classList.add('hidden')
+      document.getElementById("next").classList.remove('hidden')
+    }
+
+    function generateQuestion() {
+      currentQuestionIndex = Math.floor(Math.random() * elements.length);
+      document.getElementById("question").textContent = elements[currentQuestionIndex].symbol;
+      document.getElementById("result").textContent = "この記号(きごう)の元素(げんそ)は何かな？";
+      document.getElementById("answer").classList.remove('hidden')
+      document.getElementById("next").classList.add('hidden')
+    }
+    
+    generateQuestion();
+  </script>
+</body>
+</html>
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f3f3;
+}
+
+h1 {
+    color: #333;
+}
+
+.card {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 400px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    font-size: 24px;
+    margin: 0;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+button {
+    background-color: #4caf50;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+p {
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.card {
+    animation: fadeIn 0.5s;
+}
+
+#question{
+  font-size: 60px;
+}
+
+.hidden{
+  display: none;
+}
+
+</style>
