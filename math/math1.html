@@ -20,6 +20,8 @@
     .hidden{
       display: none;
     }
+
+
   </style>
 </head>
 <body>
@@ -30,18 +32,57 @@
       </a>
     </div>
   </nav>
-  <div class="d-flex">
-    <span id="question"></span>
-    <input type="text" id="answer" placeholder="こたえ">
+  <h1>たしざんクイズ</h1>
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col">
+        <p>むずかしさ を えらんでね</p>
+        <ul class="list-group">
+          <li class="list-group-item btn active" aria-current="true" onclick="changeStage(event, 1)">
+            <div class="d-flex w-100 justify-content-center">
+              <h5 class="mb-1">やさしい</h5>
+            </div>
+            <p class="mb-1">１けた + 1けたのたしざん</p>
+          </li>
+          <li class="list-group-item btn" onclick="changeStage(event, 2)">
+            <div class="d-flex w-100 justify-content-center">
+              <h5 class="mb-1">ふつう</h5>
+            </div>
+            <p class="mb-1">2けたの すうじ がでてくるよ</p>
+          </li>
+          <li class="list-group-item btn" onclick="changeStage(event, 3)">
+            <div class="d-flex w-100 justify-content-center">
+              <h5 class="mb-1">むずかしい</h5>
+            </div>
+            <p class="mb-1">3けたの すうじ がでてくるよ</p>
+          </li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="d-flex">
+          <span id="question"></span>
+          <input type="text" id="answer" placeholder="こたえ">
+        </div>
+        <button onclick="checkAnswer()" id="answerBtn">こたえあわせ</button>
+        <button onclick="generateQuestion()" id="nextBtn">つぎへ</button>
+        <p id="result"></p>
+      </div>
+      <div class="col">
+      </div>
+    </div>
   </div>
-  <button onclick="checkAnswer()" id="answerBtn">こたえあわせ</button>
-  <button onclick="generateQuestion()" id="nextBtn">つぎへ</button>
-  <p id="result"></p>
 
   <script>
+    var stage = 1;
     // ランダムな数字を生成する関数
     function getRandomNumber() {
-      return Math.floor(Math.random() * 10) + 1; // 1から10までのランダムな整数を生成
+      if(stage == 1){
+        return Math.floor(Math.random() * 10); // 1から10までのランダムな整数を生成
+      }else if(stage == 2){
+        return Math.floor(Math.random() * 100); // 1から10までのランダムな整数を生成
+      }else if(stage == 3){
+        return Math.floor(Math.random() * 1000); // 1から10までのランダムな整数を生成
+      }
     }
 
     // 問題を生成する関数
@@ -72,6 +113,16 @@
       } else {
         document.getElementById("result").textContent = "ざんねん、ふせいかいです";
       }
+    }
+
+    function changeStage(event, selectStage) {
+      const elements = document.getElementsByClassName( "list-group-item" );
+      for( let i = 0 ; i < elements.length ; i ++ ) {
+          elements[i].classList.remove('active');
+      }
+      event.target.closest('.list-group-item').classList.add('active')
+      stage = selectStage
+      generateQuestion();
     }
 
     // 初期問題の生成
