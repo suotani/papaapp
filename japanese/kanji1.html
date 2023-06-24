@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <title>かんじクイズ</title>
+  <style>
+  #question {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  .d-flex{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  #answer {
+    margin-left: 10px;
+  }
+
+  .hidden{
+    display: none;
+  }
+
+
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand btn btn-primary" href="../index.html">
+    さいしょのページにもどる
+    </a>
+  </div>
+  </nav>
+  <div class="quiz-container">
+  <h1>かんじクイズ</h1>
+  <form>
+    <h2 id="kanji">質問</h2>
+    <p id="question"></p>
+    
+    <label class="selection" onclick="selectAnswer(this)">
+      <input type="radio" name="answer" value="choice1" class="answerInput">
+      <span class="answer">選択肢1</span>
+    </label>
+    
+    <label class="selection" onclick="selectAnswer(this)">
+      <input type="radio" name="answer" value="choice2" class="answerInput">
+      <span class="answer">選択肢1</span>
+    </label>
+    
+    <label class="selection" onclick="selectAnswer(this)">
+      <input type="radio" name="answer" value="choice3" class="answerInput">
+      <span class="answer">選択肢1</span>
+    </label>
+    
+    <label class="selection" onclick="selectAnswer(this)">
+      <input type="radio" name="answer" value="choice4" class="answerInput">
+      <span class="answer">選択肢1</span>
+    </label>
+    
+    <div class="buttons">
+      <input type="button" id="answer" value="こたえる" onclick="checkAnswer()">
+      <input type="button" id="next" value="つぎへ" onclick="generateQuestion()">
+      <p id="result"></p>
+    </div>
+  </form>
+</div>
+</body>
+</html>
+<script>
+var elements = [
+{ kanji: '一', kun: 'ひとつ', ony: 'イチ'},
+{ kanji: '右', kun: 'みぎ', ony: 'ウ'},
+{ kanji: '雨', kun: 'あめ', ony: 'ウ'},
+{ kanji: '円', kun: 'まるい', ony: 'エン'},
+{ kanji: '王', kun: 'きみ', ony: 'オウ'},
+{ kanji: '音', kun: 'おと', ony: 'オン'},
+{ kanji: '下', kun: 'した', ony: 'カ'},
+{ kanji: '火', kun: 'ひ', ony: 'カ'},
+{ kanji: '花', kun: 'はな', ony: 'カ'},
+{ kanji: '貝', kun: 'かい', ony: 'バイ'},
+{ kanji: '学', kun: 'まなぶ', ony: 'ガク'},
+{ kanji: '気', kun: 'け', ony: 'キ'},
+{ kanji: '九', kun: 'ここのつ', ony: 'キュウ'},
+{ kanji: '休', kun: 'やすむ', ony: 'キュウ'},
+{ kanji: '玉', kun: 'たま', ony: 'ギョク'},
+{ kanji: '金', kun: 'かね', ony: 'キン'},
+{ kanji: '空', kun: 'そら', ony: 'クウ'},
+{ kanji: '月', kun: 'つき', ony: 'ゲツ'},
+{ kanji: '犬', kun: 'いぬ', ony: 'ケン'},
+{ kanji: '見', kun: 'みる', ony: 'ケン'},
+{ kanji: '五', kun: 'いつつ', ony: 'ゴ'},
+{ kanji: '口', kun: 'くち', ony: 'コウ'},
+{ kanji: '校', kun: 'まなびや', ony: 'コウ'},
+{ kanji: '左', kun: 'ひだり', ony: 'サ'},
+{ kanji: '三', kun: 'みっつ', ony: 'サン'},
+{ kanji: '山', kun: 'やま', ony: 'サン'},
+{ kanji: '子', kun: 'こ', ony: 'シ'},
+{ kanji: '四', kun: 'よっつ', ony: 'シ'},
+{ kanji: '糸', kun: 'いと', ony: 'シ'},
+{ kanji: '字', kun: 'あざな', ony: 'ジ'},
+{ kanji: '耳', kun: 'みみ', ony: 'ジ'},
+{ kanji: '七', kun: 'なな', ony: 'シチ'},
+{ kanji: '車', kun: 'くるま', ony: 'シャ'},
+{ kanji: '手', kun: 'て', ony: 'シュ'},
+{ kanji: '十', kun: 'とう', ony: 'ジュウ'},
+{ kanji: '出', kun: 'でる', ony: 'シュツ'},
+{ kanji: '女', kun: 'おんな', ony: 'ジョ'},
+{ kanji: '小', kun: 'ちいさい', ony: 'ショウ'},
+{ kanji: '上', kun: 'うえ', ony: 'ジョウ'},
+{ kanji: '森', kun: 'もり', ony: 'シン'},
+{ kanji: '人', kun: 'ひと', ony: 'ジン'},
+{ kanji: '水', kun: 'みず', ony: 'スイ'},
+{ kanji: '正', kun: 'ただしい', ony: 'セイ'},
+{ kanji: '生', kun: 'いきる', ony: 'セイ'},
+{ kanji: '青', kun: 'あお', ony: 'セイ'},
+{ kanji: '石', kun: 'いし', ony: 'セキ'},
+{ kanji: '赤', kun: 'あか', ony: 'セキ'},
+{ kanji: '千', kun: 'ち', ony: 'セン'},
+{ kanji: '川', kun: 'かわ', ony: 'セン'},
+{ kanji: '先', kun: 'さき', ony: 'セン'},
+{ kanji: '早', kun: 'はやい', ony: 'ソウ'},
+{ kanji: '草', kun: 'くさ', ony: 'ソウ'},
+{ kanji: '足', kun: 'あし', ony: 'ソク'},
+{ kanji: '村', kun: 'むら', ony: 'ソン'},
+{ kanji: '大', kun: 'おおきい', ony: 'ダイ'},
+{ kanji: '男', kun: 'おとこ', ony: 'ダン'},
+{ kanji: '竹', kun: 'たけ', ony: 'チク'},
+{ kanji: '中', kun: 'なか', ony: 'チュウ'},
+{ kanji: '虫', kun: 'むし', ony: 'チュウ'},
+{ kanji: '町', kun: 'まち', ony: 'チョウ'},
+{ kanji: '天', kun: 'あま', ony: 'テン'},
+{ kanji: '田', kun: 'た', ony: 'デン'},
+{ kanji: '土', kun: 'つち', ony: 'ド'},
+{ kanji: '二', kun: 'ふたつ', ony: 'ニ'},
+{ kanji: '日', kun: 'ひ', ony: 'ニチ'},
+{ kanji: '入', kun: 'はいる', ony: 'ニュウ'},
+{ kanji: '年', kun: 'とし', ony: 'ネン'},
+{ kanji: '白', kun: 'しろ', ony: 'ハク'},
+{ kanji: '八', kun: 'やっつ', ony: 'ハチ'},
+{ kanji: '百', kun: 'もも', ony: 'ヒャク'},
+{ kanji: '文', kun: 'ふみ', ony: 'ブン'},
+{ kanji: '木', kun: 'き', ony: 'モク'},
+{ kanji: '本', kun: 'もと', ony: 'ホン'},
+{ kanji: '名', kun: 'な', ony: 'メイ'},
+{ kanji: '目', kun: 'め', ony: 'モク'},
+{ kanji: '立', kun: 'たつ', ony: 'リツ'},
+{ kanji: '力', kun: 'ちから', ony: 'リキ'},
+{ kanji: '林', kun: 'はやし', ony: 'リン'},
+{ kanji: '六', kun: 'むっつ', ony: 'ロク'}
+]
+  var mode = 'answer';
+  var currentList4;
+  var currentQuestionIndex;
+  var currentQuestionMode;
+
+  function selectAnswer(e) {
+    document.querySelectorAll('.selection').forEach(function(element, i) {
+      element.classList.remove('active')
+    })
+    e.classList.add('active')
+  }
+
+  function checkAnswer() {
+    if(currentQuestionMode == 0){
+      var correctAnswer = currentList4[currentQuestionIndex].ony;
+    }else{
+      var correctAnswer = currentList4[currentQuestionIndex].kun;
+    }
+    var selectedAnswer = document.querySelector('input[name="answer"]:checked').value;
+    if (selectedAnswer === correctAnswer) {
+      document.getElementById("result").textContent = "せいかい！";
+      document.getElementById("answer").classList.add('hidden')
+      document.getElementById("next").classList.remove('hidden')
+    } else {
+      document.getElementById("result").textContent = "ざんねん、ふせいかいです";
+    }
+  }
+
+  function generateQuestion() {
+    document.getElementById("result").textContent = '';
+    document.getElementById("answer").classList.remove('hidden')
+    document.getElementById("next").classList.add('hidden')
+    currentList4 = getRandomElements(elements);
+    currentQuestionIndex = Math.floor(Math.random() * 4);
+    currentQuestionMode = Math.floor(Math.random() * 2);
+    document.getElementById("kanji").textContent = currentList4[currentQuestionIndex].kanji;
+    if(currentQuestionMode == 0){
+      document.getElementById("question").textContent = "このかんじの「おん」よみは？";
+    }else{
+      document.getElementById("question").textContent = "このかんじの「くん」よみは？";
+    }
+    document.querySelectorAll('.answerInput').forEach(function(element, i) {
+      if(currentQuestionMode == 0){
+        var text = currentList4[i].ony
+      }else{
+        var text = currentList4[i].kun
+      }
+      element.value = text;
+      document.querySelectorAll('.answer')[i].innerHTML = text;
+    });
+  }
+
+  function getRandomElements(list) {
+    var shuffled = list.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return [shuffled[0],shuffled[1],shuffled[2],shuffled[3]];
+  }
+
+  generateQuestion();
+</script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  
+  .quiz-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  h1, h2 {
+    text-align: center;
+  }
+  
+  p {
+    margin-bottom: 10px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  input[type="radio"] {
+    margin-right: 5px;
+  }
+  
+  input[type="button"] {
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  input[type="button"]:hover {
+    background-color: #45a049;
+  }
+
+  .hidden{
+    display: none;
+  }
+  #question{
+    text-align: center;
+  }
+
+  .selection {
+    padding: 30px 15px;
+    margin-bottom: 15px;
+    border-radius: 20px;
+  }
+  .selection:nth-of-type(1) {
+    background-color: rgb(246, 140, 140);
+  }
+  .selection:nth-of-type(2) {
+    background-color: rgb(161, 133, 243);
+  }
+  .selection:nth-of-type(3) {
+    background-color: rgb(142, 240, 135);
+  }
+  .selection:nth-of-type(4) {
+    background-color: rgb(242, 133, 209);
+  }
+  .buttons{
+    text-align: center;
+  }
+  .active{
+    border: solid 4px red;
+  }
+</style>
