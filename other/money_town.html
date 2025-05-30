@@ -2,53 +2,89 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>街の出来事ゲーム</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
+      background: #f8f9fa;
       padding: 20px;
     }
-    .section {
+    .player-money-check {
+      margin: 10px 0;
+      padding: 15px;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
       background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    textarea, input, button, select {
-      margin-top: 10px;
-      display: block;
+    .player-name {
+      cursor: pointer;
+      color: #0d6efd;
+      text-decoration: underline;
+    }
+    .player-name:hover {
+      color: #0a58ca;
+    }
+    .money-amount {
+      margin-left: 10px;
+      font-weight: bold;
+    }
+    .hide-button {
+      margin-left: 10px;
+      padding: 2px 8px;
+      font-size: 0.8em;
     }
   </style>
 </head>
 <body>
-  <div class="section">
-    <h2>プレイヤー設定</h2>
-    <input id="playerNames" placeholder="カンマ区切りで名前を入力 (例: 太郎,花子,次郎)" />
-    <button onclick="startGame()">ゲーム開始</button>
-  </div>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title mb-4">プレイヤー設定</h2>
+            <div class="mb-3">
+              <input id="playerNames" class="form-control" placeholder="カンマ区切りで名前を入力 (例: 太郎,花子,次郎)" />
+            </div>
+            <button onclick="setupPlayers()" class="btn btn-primary">プレイヤー設定</button>
+            <div id="moneyCheckArea" style="display:none" class="mt-4">
+              <h3 class="h4 mb-3">初期金額の確認</h3>
+              <div id="playerMoneyList"></div>
+              <button onclick="startGame()" id="startGameButton" class="btn btn-success mt-3" style="display:none">ゲーム開始</button>
+            </div>
+          </div>
+        </div>
 
-  <div class="section" id="gameArea" style="display:none">
-    <h2 id="turnTitle">ターン: 1</h2>
-    <p id="eventDescription"></p>
-    <div id="discussionPhase" style="display:none">
-      <h3>話し合いフェーズ (3分間)</h3>
-      <p>所持金は公開してはいけません！</p>
-      <button onclick="endDiscussion()">話し合い終了</button>
-    </div>
-    <div id="contributionPhase" style="display:none">
-      <h3>徴収フェーズ</h3>
-      <p>名前を選んで金額を入力してください（自分だけが入力可能）</p>
-      <select id="playerSelector"></select>
-      <input type="number" id="contributionInput" placeholder="金額（万円単位）" min="0" />
-      <button onclick="submitContribution()">確定</button>
-    </div>
-    <div class="section" id="resolutionPhase" style="display:none">
-      <h3>決済フェーズ</h3>
-      <p id="resolutionResult"></p>
-      <button onclick="nextTurn()">次のターンへ</button>
+        <div class="card shadow-sm" id="gameArea" style="display:none">
+          <div class="card-body">
+            <h2 id="turnTitle" class="card-title mb-4">ターン: 1</h2>
+            <p id="eventDescription" class="lead"></p>
+            
+            <div id="discussionPhase" style="display:none" class="mb-4">
+              <div class="alert alert-info">
+                <h3 class="h5">話し合いフェーズ (3分間)</h3>
+                <p class="mb-0">所持金は公開してはいけません！</p>
+              </div>
+              <button onclick="endDiscussion()" class="btn btn-primary">話し合い終了</button>
+            </div>
+
+            <div id="contributionPhase" style="display:none" class="mb-4">
+              <h3 class="h5 mb-3">徴収フェーズ</h3>
+              <p class="text-muted">各自の出資額を入力してください（確定後は変更できません）</p>
+              <div id="contributionForms"></div>
+            </div>
+
+            <div id="resolutionPhase" style="display:none">
+              <div class="alert alert-secondary">
+                <h3 class="h5">決済フェーズ</h3>
+                <p id="resolutionResult" class="mb-0"></p>
+              </div>
+              <button onclick="nextTurn()" class="btn btn-primary">次のターンへ</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -62,7 +98,8 @@
     // ゲーム内で発生するイベントの定義
     const events = [
       {
-        description: "募集金額30万円。集まらなければ誰か1人から10万円没収",
+        title: "街の清掃事業",
+        description: "街の美化のため、清掃事業を実施します。募集金額30万円。集まらなければ誰か1人から10万円没収",
         targetAmount: 300000,
         success: () => `成功！ランダムな誰かにご褒美はなし。`,
         failure: () => {
@@ -72,7 +109,8 @@
         }
       },
       {
-        description: "募集金額70万円。集まれば誰か1人の所持金が倍になる",
+        title: "ガードレールの整備",
+        description: "安全のため、ガードレールの整備を行います。募集金額70万円。集まれば誰か1人の所持金が倍になる",
         targetAmount: 700000,
         success: () => {
           const lucky = randomPlayer();
@@ -82,8 +120,20 @@
         failure: () => `失敗！何も起こりません...`
       },
       {
-        description: "募集金額50万円。集まれば全員に10万円配布、集まらなければ全員から5万円没収",
+        title: "防犯カメラの設置",
+        description: "街の安全のため、防犯カメラを設置します。募集金額50万円。集まれば誰か1人の所持金に60万円加算",
         targetAmount: 500000,
+        success: () => `成功！ランダムな誰かにご褒美はなし。`,
+        failure: () => {
+          const lucky = randomPlayer();
+          lucky.money += 600000;
+          return `${lucky.name}が60万円加算されました！`;
+        }
+      },
+      {
+        title: "街路灯の設置",
+        description: "夜道の安全のため、街路灯を設置します。募集金額30万円。集まれば全員に10万円配布、集まらなければ全員から5万円没収",
+        targetAmount: 300000,
         success: () => {
           players.forEach(p => p.money += 100000);
           return `成功！全員に10万円が配布されました！`;
@@ -94,17 +144,19 @@
         }
       },
       {
-        description: "募集金額60万円。集まれば最も所持金の少ない人が20万円獲得",
+        title: "公園の整備",
+        description: "憩いの場として公園を整備します。募集金額60万円。集まれば最も出資額の多い人が30万円獲得",
         targetAmount: 600000,
         success: () => {
-          const poorest = players.reduce((min, p) => p.money < min.money ? p : min, players[0]);
-          poorest.money += 200000;
-          return `${poorest.name}が20万円獲得しました！`;
+          const richest = players.reduce((max, p) => p.contributed > max.contributed ? p : max, players[0]);
+          richest.money += 300000;
+          return `${richest.name}が30万円獲得しました！`;
         },
         failure: () => `失敗！何も起こりません...`
       },
       {
-        description: "募集金額80万円。集まらなければランダムな2人の所持金が半分になる",
+        title: "防災訓練の実施",
+        description: "災害に備えて防災訓練を実施します。募集金額80万円。集まらなければランダムな2人の所持金が半分になる",
         targetAmount: 800000,
         success: () => `成功！特に何も起こりません。`,
         failure: () => {
@@ -115,22 +167,8 @@
         }
       },
       {
-        description: "募集金額60万円。集まれば最も所持金の多い人から最も少ない人へ15万円移動",
-        targetAmount: 600000,
-        success: () => {
-          const richest = players.reduce((max, p) => p.money > max.money ? p : max, players[0]);
-          const poorest = players.reduce((min, p) => p.money < min.money ? p : min, players[0]);
-          if (richest !== poorest) {
-            richest.money = Math.max(0, richest.money - 150000);
-            poorest.money += 150000;
-            return `${richest.name}から${poorest.name}へ15万円移動しました！`;
-          }
-          return `成功！しかし全員の所持金が同じなので何も起こりません。`;
-        },
-        failure: () => `失敗！何も起こりません...`
-      },
-      {
-        description: "募集金額70万円。集まらなければ全員の所持金が0になる",
+        title: "大規模災害の発生",
+        description: "大規模な災害が発生しました。緊急対応が必要です。募集金額70万円。集まらなければ全員の所持金が0になる",
         targetAmount: 700000,
         success: () => `成功！特に何も起こりません。`,
         failure: () => {
@@ -141,18 +179,60 @@
     ];
 
     // ゲーム開始時の初期化処理
-    function startGame() {
+    function setupPlayers() {
       const names = document.getElementById("playerNames").value.split(",").map(n => n.trim()).filter(n => n);
       if (names.length < 2) return alert("2人以上の名前を入力してください。");
-      players = names.map(name => ({ name, money: getRandomMoney(), contributed: 0 }));
+      players = names.map(name => ({ name, money: getRandomMoney(), contributed: 0, moneyChecked: false }));
+      
+      // 金額確認用のUIを表示
+      const playerMoneyList = document.getElementById("playerMoneyList");
+      playerMoneyList.innerHTML = players.map(p => `
+        <div class="player-money-check">
+          <span class="player-name" onclick="checkMoney('${p.name}')">${p.name}</span>
+          <span class="money-amount" id="money-${p.name}" style="display:none">
+            <span id="amount-${p.name}"></span>
+            <button onclick="hideMoney('${p.name}')" class="btn btn-sm btn-outline-secondary hide-button">閉じる</button>
+          </span>
+        </div>
+      `).join("");
+      
+      document.getElementById("moneyCheckArea").style.display = "block";
+    }
+
+    // 金額確認処理
+    function checkMoney(playerName) {
+      const player = players.find(p => p.name === playerName);
+      if (!player || player.moneyChecked) return;
+      
+      const moneyElement = document.getElementById(`amount-${playerName}`);
+      moneyElement.textContent = `${(player.money / 10000).toLocaleString()}万円`;
+      document.getElementById(`money-${playerName}`).style.display = "inline";
+      player.moneyChecked = true;
+      
+      // 全員が確認したかチェック
+      if (players.every(p => p.moneyChecked)) {
+        document.getElementById("startGameButton").style.display = "block";
+      }
+    }
+
+    // 金額を隠す処理
+    function hideMoney(playerName) {
+      const moneyElement = document.getElementById(`money-${playerName}`);
+      moneyElement.style.display = "none";
+    }
+
+    // ゲーム開始処理
+    function startGame() {
       turn = 1;
       document.getElementById("gameArea").style.display = "block";
+      document.getElementById("moneyCheckArea").style.display = "none";
       nextTurn();
     }
 
     // プレイヤーの初期所持金をランダムに設定
     function getRandomMoney() {
-      return Math.floor(Math.random() * (maxStartMoney - minStartMoney + 1)) + minStartMoney;
+      const amounts = [300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
+      return amounts[Math.floor(Math.random() * amounts.length)];
     }
 
     // ランダムなプレイヤーを選択
@@ -185,7 +265,10 @@
       // 新しいターンの表示設定
       document.getElementById("turnTitle").textContent = `ターン: ${turn}`;
       currentEvent = events[Math.floor(Math.random() * events.length)];
-      document.getElementById("eventDescription").textContent = currentEvent.description;
+      document.getElementById("eventDescription").innerHTML = `
+        <h4 class="mb-3">${currentEvent.title}</h4>
+        <p>${currentEvent.description}</p>
+      `;
       document.getElementById("discussionPhase").style.display = "block";
       document.getElementById("contributionPhase").style.display = "none";
       document.getElementById("resolutionPhase").style.display = "none";
@@ -195,34 +278,76 @@
     // 話し合いフェーズ終了時の処理
     function endDiscussion() {
       document.getElementById("discussionPhase").style.display = "none";
-      const selector = document.getElementById("playerSelector");
-      selector.innerHTML = players.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
-      document.getElementById("contributionPhase").style.display = "block";
+      const contributionPhase = document.getElementById("contributionPhase");
+      contributionPhase.style.display = "block";
+      
+      // 全プレイヤーの入力フォームを表示
+      const contributionForms = document.getElementById("contributionForms");
+      contributionForms.innerHTML = players.map(p => `
+        <div class="mb-3" id="form-${p.name}">
+          <label class="form-label">${p.name}の出資額</label>
+          <div class="input-group">
+            <input type="number" class="form-control contribution-input" 
+                   data-player="${p.name}" 
+                   placeholder="金額（万円単位）" 
+                   min="0" 
+                   onchange="validateContribution(this)" />
+            <button class="btn btn-primary" onclick="submitContribution('${p.name}')">確定</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // 出資額のバリデーション
+    function validateContribution(input) {
+      const playerName = input.dataset.player;
+      const player = players.find(p => p.name === playerName);
+      const amount = Number(input.value) * 10000;
+      
+      if (amount > player.money) {
+        input.value = "";
+        alert("所持金を超える金額は入力できません");
+      }
     }
 
     // 拠出金の提出処理
-    function submitContribution() {
-      const name = document.getElementById("playerSelector").value;
-      const amountMan = Number(document.getElementById("contributionInput").value);
+    function submitContribution(playerName) {
+      const input = document.querySelector(`input[data-player="${playerName}"]`);
+      const amountMan = Number(input.value);
       const amount = amountMan * 10000;
       
       // 入力値のバリデーション
-      if (isNaN(amount) || amount < 0) return alert("正しい金額を入力してください");
-      const player = players.find(p => p.name === name);
-      if (!player || contributionsMade.has(name)) return alert("既に入力済み、または無効な名前です");
-      if (amount > player.money) return alert("所持金を超える金額です");
+      if (isNaN(amount) || amount < 0) {
+        alert("正しい金額を入力してください");
+        return;
+      }
+      
+      const player = players.find(p => p.name === playerName);
+      if (!player || contributionsMade.has(playerName)) {
+        alert("既に入力済みです");
+        return;
+      }
+      
+      if (amount > player.money) {
+        alert("所持金を超える金額です");
+        return;
+      }
 
       // 拠出金の処理
       player.money -= amount;
       player.contributed = amount;
-      contributionsMade.add(name);
-      document.getElementById("contributionInput").value = "";
+      contributionsMade.add(playerName);
+      
+      // 入力フォームを確定済み表示に変更
+      const form = document.getElementById(`form-${playerName}`);
+      form.innerHTML = `
+        <div class="form-label">${playerName}の出資額</div>
+        <div class="form-control-plaintext">確定済み</div>
+      `;
 
       // 全員の拠出が完了したかチェック
       if (contributionsMade.size === players.length) {
         endContributions();
-      } else {
-        alert(`${name}さんの入力が完了しました。他のプレイヤーへバトンタッチしてください。`);
       }
     }
 
