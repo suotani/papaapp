@@ -5,7 +5,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
   <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>街の出来事ゲーム</title>
+  <title>街の出来事解決</title>
   <style>
     body {
       background: #f8f9fa;
@@ -43,15 +43,15 @@
       <div class="col-md-8">
         <div class="card shadow-sm mb-4">
           <div class="card-body">
-            <h2 class="card-title mb-4">プレイヤー設定</h2>
+            <h2 class="card-title mb-4">住民設定</h2>
             <div class="mb-3">
               <input id="playerNames" class="form-control" placeholder="カンマ区切りで名前を入力 (例: 太郎,花子,次郎)" />
             </div>
-            <button onclick="setupPlayers()" class="btn btn-primary">プレイヤー設定</button>
+            <button onclick="setupPlayers()" class="btn btn-primary">住民設定</button>
             <div id="moneyCheckArea" style="display:none" class="mt-4">
               <h3 class="h4 mb-3">初期金額の確認</h3>
               <div id="playerMoneyList"></div>
-              <button onclick="startGame()" id="startGameButton" class="btn btn-success mt-3" style="display:none">ゲーム開始</button>
+              <button onclick="startGame()" id="startGameButton" class="btn btn-success mt-3" style="display:none">アプリ開始</button>
             </div>
           </div>
         </div>
@@ -90,12 +90,12 @@
 
   <script>
     const minStartMoney = 300000, maxStartMoney = 1000000;
-    let players = [];  // プレイヤー情報を格納する配列
+    let players = [];  // 住民情報を格納する配列
     let turn = 0;      // 現在のターン数
     let currentEvent = null;  // 現在のイベント
-    let contributionsMade = new Set();  // 拠出金を支払ったプレイヤーを記録
+    let contributionsMade = new Set();  // 拠出金を支払った住民を記録
 
-    // ゲーム内で発生するイベントの定義
+    // アプリ内で発生するイベントの定義
     const events = [
       {
         title: "街の清掃事業",
@@ -178,7 +178,7 @@
       },
     ];
 
-    // ゲーム開始時の初期化処理
+    // アプリ開始時の初期化処理
     function setupPlayers() {
       const names = document.getElementById("playerNames").value.split(",").map(n => n.trim()).filter(n => n);
       if (names.length < 2) return alert("2人以上の名前を入力してください。");
@@ -221,7 +221,7 @@
       moneyElement.style.display = "none";
     }
 
-    // ゲーム開始処理
+    // アプリ開始処理
     function startGame() {
       turn = 1;
       document.getElementById("gameArea").style.display = "block";
@@ -229,37 +229,37 @@
       nextTurn();
     }
 
-    // プレイヤーの初期所持金をランダムに設定
+    // 住民の初期所持金をランダムに設定
     function getRandomMoney() {
       const amounts = [300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
       return amounts[Math.floor(Math.random() * amounts.length)];
     }
 
-    // ランダムなプレイヤーを選択
+    // ランダムな住民を選択
     function randomPlayer() {
       return players[Math.floor(Math.random() * players.length)];
     }
 
-    // ランダムなプレイヤーを2人選択
+    // ランダムな住民を2人選択
     function randomTwoPlayers() {
-      if (players.length < 2) return [players[0], players[0]]; // プレイヤーが2人未満の場合
+      if (players.length < 2) return [players[0], players[0]]; // 住民が2人未満の場合
       const shuffled = [...players].sort(() => Math.random() - 0.5);
       return [shuffled[0], shuffled[1]];
     }
 
     // 次のターンへの移行処理
     function nextTurn() {
-      // ゲーム終了条件のチェック
+      // アプリ終了条件のチェック
       if (players.some(p => p.money <= 0)) {
-        alert("誰かが破産しました。ゲームオーバー！");
+        alert("誰かが破産しました。アプリオーバー！");
         return location.reload();
       }
       if (turn > 5) {
         const winner = players.reduce((max, p) => p.money > max.money ? p : max, players[0]);
-        alert(`ゲーム終了！優勝は ${winner.name} (${winner.money.toLocaleString()}円)`);
+        alert(`アプリ終了！優勝は ${winner.name} (${winner.money.toLocaleString()}円)`);
         return location.reload();
       }
-      // プレイヤーの拠出金をリセット
+      // 住民の拠出金をリセット
       players.forEach(p => p.contributed = 0);
 
       // 新しいターンの表示設定
@@ -281,7 +281,7 @@
       const contributionPhase = document.getElementById("contributionPhase");
       contributionPhase.style.display = "block";
       
-      // 全プレイヤーの入力フォームを表示
+      // 全住民の入力フォームを表示
       const contributionForms = document.getElementById("contributionForms");
       contributionForms.innerHTML = players.map(p => `
         <div class="mb-3" id="form-${p.name}">
