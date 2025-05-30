@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>街の出来事ゲーム</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea, input, button, select {
+      margin-top: 10px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <h2>プレイヤー設定</h2>
+    <input id="playerNames" placeholder="カンマ区切りで名前を入力 (例: 太郎,花子,次郎)" />
+    <button onclick="startGame()">ゲーム開始</button>
+  </div>
+
+  <div class="section" id="gameArea" style="display:none">
+    <h2 id="turnTitle">ターン: 1</h2>
+    <p id="eventDescription"></p>
+    <div id="discussionPhase" style="display:none">
+      <h3>話し合いフェーズ (3分間)</h3>
+      <p>所持金は公開してはいけません！</p>
+      <button onclick="endDiscussion()">話し合い終了</button>
+    </div>
+    <div id="contributionPhase" style="display:none">
+      <h3>徴収フェーズ</h3>
+      <p>名前を選んで金額を入力してください（自分だけが入力可能）</p>
+      <select id="playerSelector"></select>
+      <input type="number" id="contributionInput" placeholder="金額（万円単位）" min="0" />
+      <button onclick="submitContribution()">確定</button>
+    </div>
+    <div class="section" id="resolutionPhase" style="display:none">
+      <h3>決済フェーズ</h3>
+      <p id="resolutionResult"></p>
+      <button onclick="nextTurn()">次のターンへ</button>
+    </div>
+  </div>
+
+  <script>
+    const minStartMoney = 300000, maxStartMoney = 1000000;
+    let players = [];  // プレイヤー情報を格納する配列
+    let turn = 0;      // 現在のターン数
+    let currentEvent = null;  // 現在のイベント
+    let contributionsMade = new Set();  // 拠出金を支払ったプレイヤーを記録
+
+    // ゲーム内で発生するイベントの定義
+    const events = [
+      {
+        description: "募集金額30万円。集まらなければ誰か1人から10万円没収",
+        targetAmount: 300000,
+        success: () => `成功！ランダムな誰かにご褒美はなし。`,
+        failure: () => {
+          const unlucky = randomPlayer();
+          unlucky.money = Math.max(0, unlucky.money - 100000);
+          return `${unlucky.name}が10万円没収されました...`;
+        }
+      },
+      {
+        description: "募集金額70万円。集まれば誰か1人の所持金が倍になる",
+        targetAmount: 700000,
+        success: () => {
+          const lucky = randomPlayer();
+          lucky.money *= 2;
+          return `${lucky.name}の所持金が倍になりました！`;
+        },
+        failure: () => `失敗！何も起こりません...`
+      },
+      {
+        description: "募集金額50万円。集まれば全員に10万円配布、集まらなければ全員から5万円没収",
+        targetAmount: 500000,
+        success: () => {
+          players.forEach(p => p.money += 100000);
+          return `成功！全員に10万円が配布されました！`;
+        },
+        failure: () => {
+          players.forEach(p => p.money = Math.max(0, p.money - 50000));
+          return `失敗！全員から5万円没収されました...`;
+        }
+      },
+      {
+        description: "募集金額60万円。集まれば最も所持金の少ない人が20万円獲得",
+        targetAmount: 600000,
+        success: () => {
+          const poorest = players.reduce((min, p) => p.money < min.money ? p : min, players[0]);
+          poorest.money += 200000;
+          return `${poorest.name}が20万円獲得しました！`;
+        },
+        failure: () => `失敗！何も起こりません...`
+      },
+      {
+        description: "募集金額80万円。集まらなければランダムな2人の所持金が半分になる",
+        targetAmount: 800000,
+        success: () => `成功！特に何も起こりません。`,
+        failure: () => {
+          const [unlucky1, unlucky2] = randomTwoPlayers();
+          unlucky1.money = Math.floor(unlucky1.money / 2);
+          unlucky2.money = Math.floor(unlucky2.money / 2);
+          return `${unlucky1.name}と${unlucky2.name}の所持金が半分になりました...`;
+        }
+      },
+      {
+        description: "募集金額60万円。集まれば最も所持金の多い人から最も少ない人へ15万円移動",
+        targetAmount: 600000,
+        success: () => {
+          const richest = players.reduce((max, p) => p.money > max.money ? p : max, players[0]);
+          const poorest = players.reduce((min, p) => p.money < min.money ? p : min, players[0]);
+          if (richest !== poorest) {
+            richest.money = Math.max(0, richest.money - 150000);
+            poorest.money += 150000;
+            return `${richest.name}から${poorest.name}へ15万円移動しました！`;
+          }
+          return `成功！しかし全員の所持金が同じなので何も起こりません。`;
+        },
+        failure: () => `失敗！何も起こりません...`
+      },
+      {
+        description: "募集金額70万円。集まらなければ全員の所持金が0になる",
+        targetAmount: 700000,
+        success: () => `成功！特に何も起こりません。`,
+        failure: () => {
+          players.forEach(p => p.money = 0);
+          return `失敗！全員の所持金が0になりました...`;
+        }
+      },
+    ];
+
+    // ゲーム開始時の初期化処理
+    function startGame() {
+      const names = document.getElementById("playerNames").value.split(",").map(n => n.trim()).filter(n => n);
+      if (names.length < 2) return alert("2人以上の名前を入力してください。");
+      players = names.map(name => ({ name, money: getRandomMoney(), contributed: 0 }));
+      turn = 1;
+      document.getElementById("gameArea").style.display = "block";
+      nextTurn();
+    }
+
+    // プレイヤーの初期所持金をランダムに設定
+    function getRandomMoney() {
+      return Math.floor(Math.random() * (maxStartMoney - minStartMoney + 1)) + minStartMoney;
+    }
+
+    // ランダムなプレイヤーを選択
+    function randomPlayer() {
+      return players[Math.floor(Math.random() * players.length)];
+    }
+
+    // ランダムなプレイヤーを2人選択
+    function randomTwoPlayers() {
+      if (players.length < 2) return [players[0], players[0]]; // プレイヤーが2人未満の場合
+      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      return [shuffled[0], shuffled[1]];
+    }
+
+    // 次のターンへの移行処理
+    function nextTurn() {
+      // ゲーム終了条件のチェック
+      if (players.some(p => p.money <= 0)) {
+        alert("誰かが破産しました。ゲームオーバー！");
+        return location.reload();
+      }
+      if (turn > 5) {
+        const winner = players.reduce((max, p) => p.money > max.money ? p : max, players[0]);
+        alert(`ゲーム終了！優勝は ${winner.name} (${winner.money.toLocaleString()}円)`);
+        return location.reload();
+      }
+      // プレイヤーの拠出金をリセット
+      players.forEach(p => p.contributed = 0);
+
+      // 新しいターンの表示設定
+      document.getElementById("turnTitle").textContent = `ターン: ${turn}`;
+      currentEvent = events[Math.floor(Math.random() * events.length)];
+      document.getElementById("eventDescription").textContent = currentEvent.description;
+      document.getElementById("discussionPhase").style.display = "block";
+      document.getElementById("contributionPhase").style.display = "none";
+      document.getElementById("resolutionPhase").style.display = "none";
+      contributionsMade = new Set();
+    }
+
+    // 話し合いフェーズ終了時の処理
+    function endDiscussion() {
+      document.getElementById("discussionPhase").style.display = "none";
+      const selector = document.getElementById("playerSelector");
+      selector.innerHTML = players.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
+      document.getElementById("contributionPhase").style.display = "block";
+    }
+
+    // 拠出金の提出処理
+    function submitContribution() {
+      const name = document.getElementById("playerSelector").value;
+      const amountMan = Number(document.getElementById("contributionInput").value);
+      const amount = amountMan * 10000;
+      
+      // 入力値のバリデーション
+      if (isNaN(amount) || amount < 0) return alert("正しい金額を入力してください");
+      const player = players.find(p => p.name === name);
+      if (!player || contributionsMade.has(name)) return alert("既に入力済み、または無効な名前です");
+      if (amount > player.money) return alert("所持金を超える金額です");
+
+      // 拠出金の処理
+      player.money -= amount;
+      player.contributed = amount;
+      contributionsMade.add(name);
+      document.getElementById("contributionInput").value = "";
+
+      // 全員の拠出が完了したかチェック
+      if (contributionsMade.size === players.length) {
+        endContributions();
+      } else {
+        alert(`${name}さんの入力が完了しました。他のプレイヤーへバトンタッチしてください。`);
+      }
+    }
+
+    // 拠出フェーズ終了時の処理
+    function endContributions() {
+      document.getElementById("contributionPhase").style.display = "none";
+      document.getElementById("resolutionPhase").style.display = "block";
+      const total = players.reduce((sum, p) => sum + p.contributed, 0);
+      const resultText = total >= currentEvent.targetAmount ? currentEvent.success(players) : currentEvent.failure(players);
+      document.getElementById("resolutionResult").textContent = `集まった金額: ${(total / 10000).toLocaleString()}万円\n${resultText}`;
+      turn++;
+    }
+  </script>
+</body>
+</html>
