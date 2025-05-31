@@ -123,8 +123,8 @@
         title: "防犯カメラの設置",
         description: "街の安全のため、防犯カメラを設置します。募集金額50万円。集まれば誰か1人の所持金に60万円加算",
         targetAmount: 500000,
-        success: () => `成功！ランダムな誰かにご褒美はなし。`,
-        failure: () => {
+        failure: () => `失敗！何も起こりません...`,
+        success: () => {
           const lucky = randomPlayer();
           lucky.money += 600000;
           return `${lucky.name}が60万円加算されました！`;
