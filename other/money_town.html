@@ -260,7 +260,10 @@
         return location.reload();
       }
       // 住民の拠出金をリセット
-      players.forEach(p => p.contributed = 0);
+      players.forEach(p => {
+        p.contributed = 0;
+        p.moneyChecked = false;  // 所持金確認フラグをリセット
+      });
 
       // 新しいターンの表示設定
       document.getElementById("turnTitle").textContent = `ターン: ${turn}`;
@@ -357,8 +360,45 @@
       document.getElementById("resolutionPhase").style.display = "block";
       const total = players.reduce((sum, p) => sum + p.contributed, 0);
       const resultText = total >= currentEvent.targetAmount ? currentEvent.success(players) : currentEvent.failure(players);
-      document.getElementById("resolutionResult").textContent = `集まった金額: ${(total / 10000).toLocaleString()}万円\n${resultText}`;
+      document.getElementById("resolutionResult").innerHTML = `
+        <p>集まった金額: ${(total / 10000).toLocaleString()}万円</p>
+        <p>${resultText}</p>
+        <div class="mt-4">
+          <h5>所持金の確認</h5>
+          <div id="moneyCheckList"></div>
+        </div>
+      `;
+
+      // 所持金確認用のUIを表示
+      const moneyCheckList = document.getElementById("moneyCheckList");
+      moneyCheckList.innerHTML = players.map(p => `
+        <div class="player-money-check">
+          <span class="player-name" onclick="checkCurrentMoney('${p.name}')">${p.name}</span>
+          <span class="money-amount" id="current-money-${p.name}" style="display:none">
+            <span id="current-amount-${p.name}"></span>
+            <button onclick="hideCurrentMoney('${p.name}')" class="btn btn-sm btn-outline-secondary hide-button">閉じる</button>
+          </span>
+        </div>
+      `).join("");
+
       turn++;
+    }
+
+    // 現在の所持金を確認
+    function checkCurrentMoney(playerName) {
+      const player = players.find(p => p.name === playerName);
+      if (!player || player.moneyChecked) return;
+      
+      const moneyElement = document.getElementById(`current-amount-${playerName}`);
+      moneyElement.textContent = `${(player.money / 10000).toLocaleString()}万円`;
+      document.getElementById(`current-money-${playerName}`).style.display = "inline";
+      player.moneyChecked = true;
+    }
+
+    // 現在の所持金を隠す
+    function hideCurrentMoney(playerName) {
+      const moneyElement = document.getElementById(`current-money-${playerName}`);
+      moneyElement.style.display = "none";
     }
   </script>
 </body>
