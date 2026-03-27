@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rubik's Cube — Move Tracer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+    body { background:#f5f4f0; font-family:'IBM Plex Mono',monospace; overflow:hidden; height:100vh; }
+    #canvas-container { height:100vh; }
+    textarea, button { font-family:inherit !important; font-size:.8rem; }
+    </style>
+  </head>
+
+  <body>
+    <div class="d-flex h-100">
+      <div id="canvas-container" class="flex-grow-1"></div>
+      <div class="border-start p-3 d-flex flex-column gap-2" style="width:320px;background:#fafaf8">
+        <textarea id="input" class="form-control form-control-sm" rows="4" placeholder="x1, -y3, 2x1, y3"></textarea>
+        <div class="d-flex gap-2">
+          <button id="btn-run"   class="btn btn-dark btn-sm flex-grow-1">▶ 実行</button>
+          <button id="btn-reset" class="btn btn-outline-secondary btn-sm">↺</button>
+        </div>
+        <div class="row g-1" id="quick-moves">
+          <div class="col-4"><button type="button" class="btn btn-primary btn-outline-dark btn-sm w-100" data-move="x1">x1</button></div>
+          <div class="col-4"><button type="button" class="btn btn-primary btn-outline-dark btn-sm w-100" data-move="x2">x2</button></div>
+          <div class="col-4"><button type="button" class="btn btn-primary btn-outline-dark btn-sm w-100" data-move="x3">x3</button></div>
+          <div class="col-4"><button type="button" class="btn btn-info btn-outline-dark btn-sm w-100" data-move="y1">y1</button></div>
+          <div class="col-4"><button type="button" class="btn btn-info btn-outline-dark btn-sm w-100" data-move="y2">y2</button></div>
+          <div class="col-4"><button type="button" class="btn btn-info btn-outline-dark btn-sm w-100" data-move="y3">y3</button></div>
+          <div class="col-4"><button type="button" class="btn btn-success btn-outline-dark btn-sm w-100" data-move="z1">z1</button></div>
+          <div class="col-4"><button type="button" class="btn btn-success btn-outline-dark btn-sm w-100" data-move="z2">z2</button></div>
+          <div class="col-4"><button type="button" class="btn btn-success btn-outline-dark btn-sm w-100" data-move="z3">z3</button></div>
+        </div>
+        <div id="error" class="text-danger small" style="display:none"></div>
+        <small class="text-muted lh-lg">
+          <p>「-」で逆方向(-x1)</p>
+          <p>「2x1」でx1を2回繰り返し</p>
+        </small>
+        <img src="rule.png" alt="Cube" class="img-fluid">
+        <div class="mt-4">
+          <a class="btn btn-primary mt-4" href="../index.html"> さいしょのページにもどる </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+<script language="javascript" type="text/javascript">
+// ================================================================
+// CUBE STATE
+// Faces: 'F'前 'B'後 'U'上 'D'下 'L'左 'R'右（FACE_NAMES の順＝展開図の並び）
+// Stickers: row-major 0..8 (left→right, top→down)
+// state[faceName][pos] = { face, pos }  (元の面の文字列＋番号)
+// ================================================================
+
+const FACE_NAMES = ['F','B','U','D','L','R'];
+
+const initState = () =>
+  Object.fromEntries(FACE_NAMES.map(f => [f, Array.from({length:9}, (_,p) => ({face:f, pos:p}))]));
+
+const cloneState = s => Object.fromEntries(FACE_NAMES.map(f => [f, s[f].map(c => ({...c}))]));
+
+// ================================================================
+// MOVE TABLE（各「手」を 90° 正方向に 1 回だけ回したときのステッカー移動）
+//
+// 【オブジェクト全体】
+//   MOVES[手のキー] = その手用の「移動行」の配列
+//   手のキー = 軸の文字 + 層番号（例: 'x' と 1 → キーは 'x1'）。applyMove 内で axis と num から結合して参照する。
+//
+// 【1 行の形】[ ソースの面, ソースの位置, 宛先の面, 宛先の位置 ]
+//   ・「回転直前にソースの面・位置にあったステッカーは、回転後は宛先の面・位置に移る」という意味（配列はソース→宛先の順）。
+//   ・面: 'F'前 'B'後 'U'上 'D'下 'L'左 'R'右（キューブ状態と同じ 1 文字）
+//   ・位置: 各面とも 0〜8。展開図と同じく「左→右、上→下」の行優先（row-major）
+//
+// 【applyMove との対応】
+//   まず状態全体をコピー p に取り、各行で s[宛先面][宛先位置] = p[ソース面][ソース位置] と上書きする。
+//   これで「全員いったん退避してから一斉に書く」ため、行の実行順に依存しない。
+//   入力に「-」が付く手は、expandToken で同じ手を 3 連続に展開してから applyMove される（90°×3 = 逆 90°）。
+//
+// 【手の意味（サイドバーと同じ）】
+//   x1=右端列（上から見て時計） x2=中列 x3=左端列
+//   y1=下段（手前から見て右回り） y2=中段 y3=上段
+//   z1=F 面側の層（前から見て時計） z2=中間層 z3=B 面側の層
+// ================================================================
+
+const MOVES = {
+  x1:[
+    ['F',2,'U',2],['F',5,'U',5],['F',8,'U',8],
+    ['B',2,'D',8],['B',5,'D',5],['B',8,'D',2],
+    ['U',2,'B',8],['U',5,'B',5],['U',8,'B',2],
+    ['D',2,'F',2],['D',5,'F',5],['D',8,'F',8],
+    ['R',0,'R',2],['R',1,'R',5],['R',2,'R',8],['R',3,'R',1],['R',5,'R',7],['R',6,'R',0],['R',7,'R',3],['R',8,'R',6]
+  ],
+  x2:[
+    ['F',1,'U',1],['F',4,'U',4],['F',7,'U',7],
+    ['B',1,'D',7],['B',4,'D',4],['B',7,'D',1],
+    ['U',1,'B',7],['U',4,'B',4],['U',7,'B',1],
+    ['D',1,'F',1],['D',4,'F',4],['D',7,'F',7]
+  ],
+  x3:[
+    ['F',0,'U',0],['F',3,'U',3],['F',6,'U',6],
+    ['B',0,'D',6],['B',3,'D',3],['B',6,'D',0],
+    ['U',0,'B',6],['U',3,'B',3],['U',6,'B',0],
+    ['D',0,'F',0],['D',3,'F',3],['D',6,'F',6],
+    ['L',0,'L',6],['L',1,'L',3],['L',2,'L',0],['L',3,'L',7],['L',5,'L',1],['L',6,'L',8],['L',7,'L',5],['L',8,'L',2]
+  ],
+  y1:[
+    ['F',6,'R',6],['F',7,'R',7],['F',8,'R',8],
+    ['B',6,'L',8],['B',7,'L',7],['B',8,'L',6],
+    ['D',0,'D',2],['D',1,'D',5],['D',2,'D',8],['D',3,'D',1],['D',5,'D',7],['D',6,'D',0],['D',7,'D',3],['D',8,'D',6],
+    ['L',6,'F',6],['L',7,'F',7],['L',8,'F',8],
+    ['R',6,'B',8],['R',7,'B',7],['R',8,'B',6]
+  ],
+  y2:[
+    ['F',3,'R',3],['F',4,'R',4],['F',5,'R',5],
+    ['B',3,'L',5],['B',4,'L',4],['B',5,'L',3],
+    ['L',3,'F',3],['L',4,'F',4],['L',5,'F',5],
+    ['R',3,'B',5],['R',4,'B',4],['R',5,'B',3]
+  ],
+  y3:[
+    ['F',0,'R',0],['F',1,'R',1],['F',2,'R',2],
+    ['B',0,'L',2],['B',1,'L',1],['B',2,'L',0],
+    ['U',0,'U',6],['U',1,'U',3],['U',2,'U',0],['U',3,'U',7],['U',5,'U',1],['U',6,'U',8],['U',7,'U',5],['U',8,'U',2],
+    ['L',0,'F',0],['L',1,'F',1],['L',2,'F',2],
+    ['R',0,'B',2],['R',1,'B',1],['R',2,'B',0]
+  ],
+  z1:[
+    ['F',0,'F',6],['F',1,'F',3],['F',2,'F',0],['F',3,'F',7],['F',5,'F',1],['F',6,'F',8],['F',7,'F',5],['F',8,'F',2],
+    ['U',6,'L',8],['U',7,'L',5],['U',8,'L',2],
+    ['D',0,'R',6],['D',1,'R',3],['D',2,'R',0],
+    ['L',2,'D',0],['L',5,'D',1],['L',8,'D',2],
+    ['R',0,'U',6],['R',3,'U',7],['R',6,'U',8]
+  ],
+  z2:[
+    ['U',3,'L',7],['U',4,'L',4],['U',5,'L',1],
+    ['D',3,'R',7],['D',4,'R',4],['D',5,'R',1],
+    ['L',1,'D',3],['L',4,'D',4],['L',7,'D',5],
+    ['R',1,'U',3],['R',4,'U',4],['R',7,'U',5]
+  ],
+  z3:[
+    ['B',0,'B',6],['B',1,'B',3],['B',2,'B',0],['B',3,'B',7],['B',5,'B',1],['B',6,'B',8],['B',7,'B',5],['B',8,'B',2],
+    ['U',0,'L',6],['U',1,'L',3],['U',2,'L',0],
+    ['D',6,'R',8],['D',7,'R',5],['D',8,'R',2],
+    ['L',0,'D',6],['L',3,'D',7],['L',6,'D',8],
+    ['R',2,'U',0],['R',5,'U',1],['R',8,'U',2]
+  ],
+};
+
+function applyMove(move, s) {
+  const mappings = MOVES[move.axis + move.num];
+  const p = Object.fromEntries(FACE_NAMES.map(f => [f, s[f].slice()]));
+  for (const [sf,sp,df,dp] of mappings) s[df][dp] = p[sf][sp];
+}
+
+// ── Input parsing ─────────────────────────────────────────────────
+
+function expandToken(raw) {
+  const t = raw.trim().toLowerCase();
+  const m = t.match(/^(\d+)?(-?)([xyz][123])$/);
+  if (!m) return [t];
+  const reps = Math.min(+(m[1] || 1), 99);
+  const base = m[3];
+  const total = reps * (m[2] === '-' ? 3 : 1);
+  return Array(total).fill(base);
+}
+
+function parseMove(token) {
+  const m = token.trim().toLowerCase().match(/^([xyz])([123])$/);
+  return m ? {axis: m[1], num: +m[2]} : null;
+}
+
+// ── App state ─────────────────────────────────────────────────────
+
+let cubeState = initState();
+let prevState = initState();
+
+const inputEl = document.getElementById('input');
+const errorEl = document.getElementById('error');
+
+document.getElementById('btn-run').addEventListener('click', runInput);
+document.getElementById('btn-reset').addEventListener('click', resetCube);
+inputEl.addEventListener('keydown', e => { if (e.key==='Enter' && (e.ctrlKey||e.metaKey)) runInput(); });
+document.querySelectorAll('[data-move]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const move = btn.dataset.move;
+    inputEl.value = inputEl.value.trim() ? `${inputEl.value.trim()}, ${move}` : move;
+    runInput();
+  });
+});
+
+function runInput() {
+  const tokens = inputEl.value.split(',').map(t=>t.trim()).filter(Boolean).flatMap(expandToken);
+  const moves = [];
+  for (const t of tokens) {
+    const m = parseMove(t);
+    if (!m) { showError(`無効: "${t}"`); return; }
+    moves.push(m);
+  }
+  hideError();
+  // 毎回「実行」時は初期状態から適用する
+  cubeState = initState();
+  prevState = initState();
+  moves.forEach(m => applyMove(m, cubeState));
+  window._sketch?.redraw();
+}
+
+function resetCube() {
+  cubeState = initState();
+  prevState = initState();
+  inputEl.value = '';
+  hideError();
+  window._sketch?.redraw();
+}
+
+function showError(msg) { errorEl.textContent=msg; errorEl.style.display=''; }
+function hideError()    { errorEl.style.display='none'; }
+
+// ================================================================
+// DRAWING (p5.js)
+// Net layout:      [U]
+//             [L] [F] [R] [B]
+//                  [D]
+// NET_GRID[face] = [col, row]（面ブロック左上のグリッド座標）
+// B 面だけステッカー番号 0..8 の並びを左右反転して描画する（展開図で離れた B が、F/R とのつながりで読みやすくなる）
+//   論理 0,1,2（データ上の上段）→ 画面上で左から B2,B1,B0（= B0 が右上、B1 が上中央）
+//   論理 6,7,8（下段）→ 画面上で B8 が左下
+// ================================================================
+
+const FACE_LABELS = ['F上','B下','U奥','D手前','L左','R右'];
+const NET_GRID    = [[1,1],[3,1],[1,0],[1,2],[0,1],[2,1]];
+const FACE_COLORS = {
+  U: [245, 245, 245], // white
+  L: [255, 140, 0],   // orange
+  F: [40, 170, 75],   // green
+  R: [200, 40, 40],   // red
+  B: [35, 95, 210],   // blue
+  D: [245, 225, 35],  // yellow
+};
+
+window._sketch = new p5(sk => {
+  /** キャンバス（#canvas-container）のピクセル幅・高さ */
+  let canvasWidth, canvasHeight;
+  /** 1マス（ステッカー）の一辺の長さ */
+  let stickerCellSize;
+  /** 同一面内で隣接マス同士のすき間 */
+  let stickerGap;
+  /** 展開図で「面ブロック」と「面ブロック」のあいだのすき間 */
+  let faceBlockGap;
+  /** 1面ぶんの外枠サイズ（3×3マス＋マス間ギャップ2本分） */
+  let faceBlockSpan;
+  /** 展開図全体の左上オフセット（キャンバス座標） */
+  let netOriginX, netOriginY;
+
+  function layout() {
+    const el = document.getElementById('canvas-container');
+    canvasWidth = el.clientWidth || 700;
+    canvasHeight = el.clientHeight || 600;
+    stickerCellSize = Math.max(16, Math.floor(Math.min((canvasWidth - 50) / 17.3, (canvasHeight - 50) / 14.6)));
+    stickerGap = Math.max(2, Math.round(stickerCellSize * 0.1));
+    faceBlockGap = Math.max(3, Math.round(stickerCellSize * 0.45));
+    faceBlockSpan = 3 * stickerCellSize + 2 * stickerGap;
+    netOriginX = 50;
+    netOriginY = 50;
+  }
+
+  const B_FI = FACE_NAMES.indexOf('B');
+  const stickerGridColRow = (fi, pos) => {
+    let col = pos % 3, row = Math.floor(pos / 3);
+    if (fi === B_FI) col = 2 - col;
+    return [col, row];
+  };
+
+  const cellTL  = (fi,pos) => {
+    let [col,row] = stickerGridColRow(fi, pos);
+    const step = stickerCellSize + stickerGap;
+    const blockStep = faceBlockSpan + faceBlockGap;
+    
+    if (fi === B_FI && true){
+      col = 2 - col;
+      if(row === 1 && col === 1){
+        return {
+          x: netOriginX + step + NET_GRID[fi][0] * blockStep + (col + 2) * step,
+          y: netOriginY + step + NET_GRID[fi][1] * blockStep + row * step,
+        };
+      }else{  
+        return {
+          x: netOriginX + col * (blockStep + 2 * step),
+          y: netOriginY + row * (blockStep + 2 * step),
+        };
+      }
+    }else{
+      return {
+        x: netOriginX + step + NET_GRID[fi][0] * blockStep + col * step,
+        y: netOriginY + step + NET_GRID[fi][1] * blockStep + row * step,
+      };
+    }
+    
+  };
+
+  const cellCtr = (fi,pos) => {
+    const t = cellTL(fi, pos);
+    return { x: t.x + stickerCellSize / 2, y: t.y + stickerCellSize / 2 };
+  };
+
+  sk.setup = function() {
+    layout()
+    sk.createCanvas(canvasWidth, canvasHeight).parent('canvas-container')
+    sk.noLoop()
+    sk.pixelDensity(Math.min(2,devicePixelRatio||1))
+  };
+  sk.windowResized = function() {
+    layout()
+    sk.resizeCanvas(canvasWidth, canvasHeight)
+    sk.redraw()
+  };
+
+  sk.draw = function() {
+    sk.background(245,244,240);
+    sk.textFont('IBM Plex Mono,monospace');
+
+    // Compute movements
+    const stickerKey = (face, pos) => `${face},${pos}`;
+    const wasAt = new Map();
+    for (let fi=0;fi<6;fi++) {
+      const fn = FACE_NAMES[fi];
+      for (let p=0;p<9;p++) { const {face,pos}=prevState[fn][p]; wasAt.set(stickerKey(face,pos),{fi,pos:p}); }
+    }
+    const moved = new Map();
+    for (let fi=0;fi<6;fi++) {
+      const fn = FACE_NAMES[fi];
+      for (let p=0;p<9;p++) {
+        const {face,pos}=cubeState[fn][p], id=stickerKey(face,pos), from=wasAt.get(id);
+        if (from&&(from.fi!==fi||from.pos!==p)) moved.set(id,{fromFi:from.fi,fromPos:from.pos,toFi:fi,toPos:p});
+      }
+    }
+    const arrivedAt = new Set([...moved.values()].map(m=>`${m.toFi},${m.toPos}`));
+
+    // Cells
+    for (let fi=0;fi<6;fi++) {
+      const fn = FACE_NAMES[fi];
+      for (let pos=0;pos<9;pos++) {
+        const {x,y}=cellTL(fi,pos), {face:of_,pos:op}=cubeState[fn][pos];
+        const [fr, fg, fb] = FACE_COLORS[of_];
+        const hi=arrivedAt.has(`${fi},${pos}`);
+        const boost = hi ? 18 : 0;
+        sk.strokeWeight(hi?1.5:.7); sk.stroke(hi?80:190);
+        sk.fill(Math.min(255, fr + boost), Math.min(255, fg + boost), Math.min(255, fb + boost));
+        sk.rect(x, y, stickerCellSize, stickerCellSize, 1);
+        sk.noStroke(); sk.textAlign(sk.CENTER,sk.CENTER); sk.textSize(Math.max(7, stickerCellSize * (hi ? 0.30 : 0.27))); sk.fill(25);
+        sk.text(of_+op, x + stickerCellSize / 2, y + stickerCellSize / 2);
+      }
+    }
+
+    // Face labels
+    sk.noStroke(); sk.fill(150); sk.textSize(Math.max(8, stickerCellSize * 0.28)); sk.textAlign(sk.LEFT,sk.BOTTOM);
+    const blockStep = faceBlockSpan + faceBlockGap;
+    const step = stickerCellSize + stickerGap;
+    for (let fi=0;fi<6;fi++) {
+      let x = netOriginX+ step + NET_GRID[fi][0]*blockStep;
+      let y = netOriginY+ step + NET_GRID[fi][1]*blockStep - 3;
+      if (fi !== B_FI){ sk.text(FACE_LABELS[fi], x, y); }
+    }
+
+    // Arrows
+    // 重なって見えづらいので、矢印ごとに「進行方向に垂直」な方向へごく小さくずらして描画する。
+    const movedList = [...moved.values()];
+    for (let idx=0; idx<movedList.length; idx++) {
+      const {fromFi,fromPos,toFi,toPos} = movedList[idx];
+      const s=cellCtr(fromFi,fromPos), d=cellCtr(toFi,toPos);
+      const dx=d.x-s.x, dy=d.y-s.y, dist=Math.hypot(dx,dy);
+      if (dist<4) continue;
+      const ux=dx/dist, uy=dy/dist, pad=stickerCellSize * 0.37;
+      const ax0=s.x+ux*pad, ay0=s.y+uy*pad, bx0=d.x-ux*pad, by0=d.y-uy*pad;
+      const d2=Math.hypot(bx0-ax0,by0-ay0); if (d2<6) continue;
+
+      // 0..8程度の範囲で最大でも数pxくらいのオーダーに抑える
+      const offsetIdx = (idx % 7) - 3; // -3..3
+      const off = offsetIdx * stickerCellSize * 0.1;
+      const perpX = -uy, perpY = ux; // 進行方向に垂直な単位ベクトル
+
+      const ax = ax0 + perpX * off, ay = ay0 + perpY * off;
+      const bx = bx0 + perpX * off, by = by0 + perpY * off;
+
+      // 曲線（弓形）: 制御点を進行方向に垂直へずらす
+      const arcMidX = (ax + bx) / 2, arcMidY = (ay + by) / 2;
+      const curve = off + stickerCellSize * 0.10; // 曲がりの大きさ（見やすさ優先で小さめ）
+      const bezierCtrlX = arcMidX + perpX * curve, bezierCtrlY = arcMidY + perpY * curve;
+
+      sk.noStroke(); sk.fill(15); sk.ellipse(ax,ay,4,4);
+      // 曲線は塗りつぶさず、線（stroke）だけで描く
+      sk.noFill();
+      sk.stroke(15); sk.strokeWeight(1.6);
+      // cubic bezier: control1/control2 を同じ点にして、実質 quadratic っぽい曲線にする
+      sk.bezier(ax,ay, bezierCtrlX, bezierCtrlY, bezierCtrlX, bezierCtrlY, bx,by);
+
+      // 終点側の接線ベクトルは「終点 - 制御点」
+      const ang=Math.atan2(by-bezierCtrlY,bx-bezierCtrlX), hl=Math.min(11,d2*.35);
+      sk.noStroke(); sk.fill(15);
+      sk.triangle(bx,by, bx+Math.cos(ang+2.6)*hl,by+Math.sin(ang+2.6)*hl, bx+Math.cos(ang-2.6)*hl,by+Math.sin(ang-2.6)*hl);
+    }
+  };
+});
+</script>
